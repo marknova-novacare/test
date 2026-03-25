@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARKNOVA 통합 어드민 — 로그인</title>
+<style>
+  /* ── Reset ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Primary */
+    --primary: #00B884;
+    --primary-dark: #009A6E;
+    --primary-gradient: linear-gradient(135deg, #00E0A0, #00CDD4, #009CA1);
+
+    /* Semantic */
+    --success-bg: #dcfce7;  --success-text: #16a34a;
+    --danger-bg: #fee2e2;   --danger-text: #dc2626;
+    --warning-bg: #fef9c3;  --warning-text: #92400e;
+    --info-bg: #d1fae5;     --info-text: #00B884;
+
+    /* Neutral */
+    --text-primary: #191919;
+    --text-secondary: #475569;
+    --text-dimed: #94a3b8;
+    --border: #e2e8f0;
+    --bg-light: #f8fafc;
+    --bg-medium: #f1f5f9;
+    --bg-white: #ffffff;
+
+    /* Typography */
+    --font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-size-base: 13px;
+
+    /* Radius & Shadow */
+    --radius-base: 8px;
+    --shadow-card: 0 1px 3px #0000000f;
+    --shadow-focus: 0 0 0 3px #00B88414;
+  }
+
+  body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg-medium);
+  }
+
+  /* ── 로그인 배경 ── */
+  .login-bg {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  /* ── 로그인 카드 ── */
+  .login-card {
+    background: var(--bg-white);
+    border-radius: var(--radius-base);
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ── 로고 ── */
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .login-logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .login-logo-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+  }
+  .login-logo-sub {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+
+  /* ── 헤딩 ── */
+  .login-heading {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .login-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  /* ── 폼 ── */
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .form-group input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-base);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: var(--bg-white);
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  .form-group input::placeholder {
+    color: var(--text-dimed);
+  }
+  .form-group input:focus {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* ── 버튼 ── */
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: var(--radius-base);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: inherit;
+    margin-top: 4px;
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* ── 알림 ── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-base);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .alert-error {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+  }
+  .alert-success {
+    background: var(--success-bg);
+    color: var(--success-text);
+  }
+
+
+  /* ── 테스트 계정 ── */
+  .hint-section {
+    margin-top: 20px;
+  }
+  .hint-toggle {
+    width: 100%;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-base);
+    padding: 9px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    font-family: inherit;
+  }
+  .hint-toggle:hover {
+    background: var(--bg-medium);
+  }
+  .hint-list {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .hint-list.open {
+    display: flex;
+  }
+  .hint-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: var(--radius-base);
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    font-family: inherit;
+  }
+  .hint-item:hover {
+    background: var(--bg-light);
+  }
+  .hint-role {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .hint-email {
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+  .hint-desc {
+    font-size: 11px;
+    color: var(--text-dimed);
+  }
+
+  /* ── 반응형 ── */
+  @media (max-width: 480px) {
+    .login-card {
+      padding: 32px 24px;
+      border-radius: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-bg">
+  <div class="login-card">
+
+    <!-- 로고 -->
+    <div class="login-logo">
+      <div class="login-logo-icon">M</div>
+      <div>
+        <div class="login-logo-title">MARKNOVA</div>
+        <div class="login-logo-sub">통합 어드민</div>
+      </div>
+    </div>
+
+    <!-- 로그인 폼 -->
+    <div class="login-heading">로그인</div>
+    <div class="login-desc">이메일과 비밀번호를 입력하세요</div>
+
+    <div id="login-alert"></div>
+
+    <form class="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="login-email">이메일 (ID)</label>
+        <input id="login-email" type="email" placeholder="이메일을 입력하세요" autocomplete="username"
+               oninput="clearAlert('login-alert')">
+      </div>
+      <div class="form-group">
+        <label for="login-pw">비밀번호</label>
+        <input id="login-pw" type="password" placeholder="영문, 숫자, 특수문자 조합 8자 이상" autocomplete="current-password"
+               oninput="clearAlert('login-alert')">
+      </div>
+      <button type="submit" class="btn-primary" id="login-btn">로그인</button>
+    </form>
+
+    <!-- 테스트 계정 -->
+    <div class="hint-section">
+      <button class="hint-toggle" onclick="toggleTestAccounts()">
+        <span id="hint-toggle-text">🔑 테스트 계정 보기 ▼</span>
+      </button>
+      <div class="hint-list" id="hint-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   테스트 데이터 (개발용)
+   ══════════════════════════════════════ */
+const TEST_ACCOUNTS = [
+  { email: 'sysadmin@marknova.co.kr', password: 'Admin1234!', role: 'sysadmin', name: '김시스템', phone: '010-0000-0001', label: '마크노바 시스템 관리자', color: '#9333ea', status: 'active' },
+  { email: 'cs@marknova.co.kr',       password: 'Admin1234!', role: 'cs',       name: '박CS',     phone: '010-0000-0002', label: '마크노바 CS 담당자',    color: '#4f46e5', status: 'active' },
+  { email: 'manager1@org.com',        password: 'Admin1234!', role: 'mgr1',     name: '이준호',    phone: '010-0000-0003', label: '1차 기관관리자',        color: '#0891b2', status: 'active' },
+  { email: 'manager2@org.com',        password: 'Admin1234!', role: 'mgr2',     name: '박선우',    phone: '010-0000-0004', label: '2차 기관관리자',        color: '#0e7490', status: 'active' },
+  { email: 'operator@example.com',    password: 'Admin1234!', role: 'operator', name: '정운영',    phone: '010-0000-0005', label: '기관운영자',            color: '#059669', status: 'active' },
+  { email: 'emergency@example.com',   password: 'Admin1234!', role: 'emergency',name: '한응급',    phone: '010-0000-0006', label: '응급콜센터 직원',       color: '#dc2626', status: 'active' },
+  /* 비활성 계정 테스트용 */
+  { email: 'inactive@test.com',       password: 'Admin1234!', role: 'cs',       name: '미활성',    phone: '010-9999-9999', label: '비활성 테스트',         color: '#94a3b8', status: 'inactive' },
+];
+
+/* 역할별 대시보드 이름 */
+const ROLE_DASHBOARDS = {
+  sysadmin:  '시스템 관리자 대시보드',
+  cs:        'CS 담당자 대시보드',
+  mgr1:      '1차 기관관리자 대시보드',
+  mgr2:      '2차 기관관리자 대시보드',
+  operator:  '기관운영자 대시보드',
+  emergency: '응급콜센터 대시보드',
+};
+
+
+
+/* ══════════════════════════════════════
+   알림 표시/제거
+   ══════════════════════════════════════ */
+function showAlert(containerId, msg, type) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+function clearAlert(containerId) {
+  document.getElementById(containerId).innerHTML = '';
+}
+
+
+/* ══════════════════════════════════════
+   검증 유틸
+   ══════════════════════════════════════ */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PW_RE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+function isValidEmail(v) { return EMAIL_RE.test(v); }
+function isValidPassword(v) { return PW_RE.test(v); }
+
+/* ══════════════════════════════════════
+   로그인
+   ══════════════════════════════════════ */
+function handleLogin(e) {
+  e.preventDefault();
+  clearAlert('login-alert');
+
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-pw').value;
+
+  /* ① 이메일+PW 모두 미입력 */
+  if (!email && !pw) {
+    showAlert('login-alert', '이메일과 비밀번호를 입력해주세요.', 'error');
+    return;
+  }
+  /* ② 이메일 형식 */
+  if (!isValidEmail(email)) {
+    showAlert('login-alert', '올바른 이메일 형식을 입력해주세요.', 'error');
+    return;
+  }
+  /* ③ PW 규칙 (영문+숫자+특수문자 8자 이상) */
+  if (!isValidPassword(pw)) {
+    showAlert('login-alert', '비밀번호는 영문, 숫자, 특수문자 조합 8자 이상이어야 합니다.', 'error');
+    return;
+  }
+
+  /* ④ 서버 인증 시뮬레이션 (600ms 딜레이) */
+  const btn = document.getElementById('login-btn');
+  btn.textContent = '로그인 중...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    const account = TEST_ACCOUNTS.find(a => a.email === email && a.password === pw);
+
+    if (!account) {
+      showAlert('login-alert', '이메일 또는 비밀번호가 올바르지 않습니다.', 'error');
+      btn.textContent = '로그인';
+      btn.disabled = false;
+      return;
+    }
+
+    /* 비활성 계정 체크 */
+    if (account.status !== 'active') {
+      showAlert('login-alert', '계정이 활성화되지 않았습니다. 이메일로 발송된 활성화 링크를 확인해주세요.', 'error');
+      btn.textContent = '로그인';
+      btn.disabled = false;
+      return;
+    }
+
+    /* 로그인 성공 → 역할별 대시보드 진입 */
+    btn.textContent = '로그인';
+    btn.disabled = false;
+    const dashName = ROLE_DASHBOARDS[account.role] || '대시보드';
+    alert(`로그인 성공!\n\n역할: ${account.label}\n이름: ${account.name}\n\n→ ${dashName}로 이동합니다.`);
+  }, 600);
+}
+
+
+/* ══════════════════════════════════════
+   테스트 계정 토글
+   ══════════════════════════════════════ */
+function toggleTestAccounts() {
+  const list = document.getElementById('hint-list');
+  const text = document.getElementById('hint-toggle-text');
+  const isOpen = list.classList.toggle('open');
+  text.textContent = isOpen ? '🔑 테스트 계정 보기 ▲' : '🔑 테스트 계정 보기 ▼';
+}
+
+function fillTestAccount(email, password) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-pw').value = password;
+  clearAlert('login-alert');
+  document.getElementById('hint-list').classList.remove('open');
+  document.getElementById('hint-toggle-text').textContent = '🔑 테스트 계정 보기 ▼';
+}
+
+/* 테스트 계정 목록 렌더링 */
+(function renderTestAccounts() {
+  const list = document.getElementById('hint-list');
+  TEST_ACCOUNTS.filter(a => a.status === 'active').forEach(acc => {
+    const btn = document.createElement('button');
+    btn.className = 'hint-item';
+    btn.style.borderLeftColor = acc.color;
+    btn.onclick = () => fillTestAccount(acc.email, acc.password);
+    btn.innerHTML =
+      `<span class="hint-role" style="color:${acc.color}">${acc.label}</span>` +
+      `<span class="hint-email">${acc.email}</span>` +
+      `<span class="hint-desc">${acc.name} / ${acc.password}</span>`;
+    list.appendChild(btn);
+  });
+})();
+
+</script>
+
+</body>
+</html>

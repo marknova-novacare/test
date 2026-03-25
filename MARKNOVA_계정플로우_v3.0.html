@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B2G 계정 생성 / 기관 생성 / 가입 플로우 v3.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+
+  /* ── 버전 관리 패널 ── */
+  .version-bar { background: #1e293b; color: #fff; padding: 12px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .version-bar .doc-name { font-weight: 800; font-size: 14px; margin-right: auto; }
+  .version-btn { background: #334155; color: #94a3b8; border: 1px solid #475569; padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .version-btn:hover { background: #475569; color: #fff; }
+  .version-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+  .version-toggle { background: #334155; color: #e2e8f0; border: 1px solid #475569; padding: 5px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .version-toggle:hover { background: #475569; }
+
+  .changelog-panel { background: #0f172a; color: #e2e8f0; max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+  .changelog-panel.open { max-height: 600px; overflow-y: auto; }
+  .changelog-inner { padding: 20px 32px 24px; }
+  .changelog-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; color: #fff; }
+  .ver-block { margin-bottom: 20px; padding: 16px; background: #1e293b; border-radius: 8px; border-left: 3px solid #4f46e5; }
+  .ver-block.current { border-left-color: #22c55e; }
+  .ver-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ver-tag { font-size: 11px; font-weight: 800; padding: 2px 10px; border-radius: 100px; }
+  .ver-tag.current { background: #dcfce7; color: #166534; }
+  .ver-tag.past { background: #e2e8f0; color: #475569; }
+  .ver-date { font-size: 12px; color: #94a3b8; }
+  .ver-summary { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .ver-changes { list-style: none; padding: 0; }
+  .ver-changes li { font-size: 12px; color: #cbd5e1; padding: 3px 0; padding-left: 16px; position: relative; }
+  .ver-changes li::before { content: ''; position: absolute; left: 0; top: 9px; width: 8px; height: 8px; border-radius: 2px; }
+  .ver-changes li.added::before { background: #22c55e; }
+  .ver-changes li.changed::before { background: #f59e0b; }
+  .ver-changes li.removed::before { background: #ef4444; }
+  .change-legend { display: flex; gap: 16px; margin-bottom: 16px; font-size: 11px; color: #94a3b8; }
+  .change-legend span { display: flex; align-items: center; gap: 4px; }
+  .change-legend .dot { width: 8px; height: 8px; border-radius: 2px; }
+  .change-legend .dot.add { background: #22c55e; }
+  .change-legend .dot.chg { background: #f59e0b; }
+  .change-legend .dot.rem { background: #ef4444; }
+
+  /* ── 변경 항목 마커 ── */
+  .v-changed { position: relative; }
+  .v-changed::after { content: 'CHANGED'; position: absolute; top: 4px; right: 4px; font-size: 9px; font-weight: 800; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 3px; }
+  .v-new { position: relative; }
+  .v-new::after { content: 'NEW'; position: absolute; top: 4px; right: 4px; font-size: 9px; font-weight: 800; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 3px; }
+  .v-removed { position: relative; opacity: 0.5; text-decoration: line-through; }
+  .v-removed::after { content: 'REMOVED'; position: absolute; top: 4px; right: 4px; font-size: 9px; font-weight: 800; background: #fee2e2; color: #991b1b; padding: 1px 6px; border-radius: 3px; }
+  .v-marker-hide .v-changed::after, .v-marker-hide .v-new::after, .v-marker-hide .v-removed::after { display: none; }
+  .v-marker-hide .v-removed { opacity: 1; text-decoration: none; }
+
+  .page { max-width: 1400px; margin: 0 auto; padding: 40px 32px; }
+
+  /* ── 헤더 ── */
+  .header { margin-bottom: 48px; }
+  .header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+  .header .sub { font-size: 14px; color: #64748b; }
+  .header .sub span { background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; font-weight: 600; margin-right: 6px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; margin-right: 6px; }
+  .badge-sys { background: #fce4ec; color: #880e4f; }
+  .badge-sa { background: #fef3c7; color: #92400e; }
+  .badge-mgr { background: #dbeafe; color: #1e40af; }
+  .badge-opr { background: #d1fae5; color: #065f46; }
+  .badge-ec { background: #fce7f3; color: #9d174d; }
+  .badge-dev { background: #f1f5f9; color: #475569; }
+
+  .update-info { margin-top: 12px; font-size: 12px; color: #94a3b8; }
+
+  /* ── 섹션 ── */
+  .section { margin-bottom: 56px; }
+  .section-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .section-title .num { background: #4f46e5; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; }
+  .section-desc { font-size: 13px; color: #64748b; margin-bottom: 20px; padding-left: 38px; }
+
+  /* ── 용어 정의 테이블 ── */
+  .term-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .term-table th, .term-table td { padding: 14px 16px; text-align: left; border: 1px solid #e2e8f0; font-size: 13px; }
+  .term-table thead th { background: #4f46e5; color: #fff; font-weight: 700; font-size: 12px; }
+  .term-table tbody tr:nth-child(odd) { background: #fff; }
+  .term-table tbody tr:nth-child(even) { background: #f8fafc; }
+  .term-old { text-decoration: line-through; color: #94a3b8; font-size: 12px; }
+  .term-arrow { color: #4f46e5; font-weight: 800; padding: 0 6px; }
+  .term-new { font-weight: 700; color: #1e293b; }
+
+  /* ── 권한 계층 테이블 ── */
+  .hierarchy-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .hierarchy-table th, .hierarchy-table td { padding: 14px 16px; text-align: left; border: 1px solid #e2e8f0; font-size: 13px; }
+  .hierarchy-table thead th { background: #1e293b; color: #fff; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .hierarchy-table tbody tr:nth-child(odd) { background: #fff; }
+  .hierarchy-table tbody tr:nth-child(even) { background: #f8fafc; }
+  .hierarchy-table .role-cell { font-weight: 700; white-space: nowrap; }
+  .hierarchy-table .scope-cell { font-size: 12px; }
+  .check { color: #16a34a; font-weight: 700; }
+  .cross { color: #dc2626; }
+  .partial { color: #d97706; font-weight: 600; }
+
+  /* ── 플로우 테이블 ── */
+  .flow-table { width: 100%; border-collapse: collapse; }
+  .flow-table th, .flow-table td { padding: 16px 14px; border: 1px solid #cbd5e1; font-size: 13px; vertical-align: top; }
+  .flow-table thead th { background: #334155; color: #fff; font-weight: 700; text-align: center; font-size: 13px; }
+  .flow-table .step-num { background: #f1f5f9; font-weight: 800; color: #475569; text-align: center; width: 50px; font-size: 14px; }
+  .flow-table .step-name { background: #f8fafc; font-weight: 700; width: 140px; }
+  .flow-table td.active { background: #fff; }
+  .flow-table td.inactive { background: #f9fafb; color: #94a3b8; text-align: center; font-style: italic; font-size: 12px; }
+
+  .note { font-size: 11px; margin-top: 8px; padding: 6px 10px; border-radius: 6px; line-height: 1.5; }
+  .note-yellow { background: #fef9c3; color: #854d0e; border-left: 3px solid #eab308; }
+  .note-green { background: #dcfce7; color: #166534; border-left: 3px solid #22c55e; }
+  .note-red { background: #fee2e2; color: #991b1b; border-left: 3px solid #ef4444; }
+  .note-blue { background: #dbeafe; color: #1e40af; border-left: 3px solid #3b82f6; }
+  .note-purple { background: #f3e8ff; color: #6b21a8; border-left: 3px solid #a855f7; }
+
+  .action-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px; }
+  .tag-create { background: #dbeafe; color: #1e40af; }
+  .tag-login { background: #d1fae5; color: #065f46; }
+  .tag-invite { background: #fce7f3; color: #9d174d; }
+  .tag-auto { background: #fef3c7; color: #92400e; }
+  .tag-security { background: #fee2e2; color: #991b1b; }
+
+  .arrow-down { text-align: center; font-size: 24px; color: #94a3b8; padding: 4px 0; }
+
+  /* ── 플로우차트 (Mermaid) ── */
+  .mermaid-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px; margin-top: 20px; overflow-x: auto; }
+  .mermaid { display: flex; justify-content: center; }
+
+  /* ── 범례 ── */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; padding: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #475569; }
+  .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+
+  /* ── 보충 설명 ── */
+  .notes-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 20px; }
+  .notes-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #334155; }
+  .notes-box ul { list-style: none; padding: 0; }
+  .notes-box li { font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 8px; }
+  .notes-box li:last-child { border-bottom: none; }
+  .notes-box .label { font-weight: 700; min-width: 100px; color: #4f46e5; }
+
+  /* ── 인쇄 최적화 ── */
+  @media print {
+    body { background: #fff; }
+    .page { padding: 20px; }
+    .mermaid-wrap { break-inside: avoid; }
+    .flow-table { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── 버전 관리 바 ── -->
+<div class="version-bar">
+  <div class="doc-name">계정플로우 (기본) v3.0</div>
+  <button class="version-btn active">v3.0</button>
+  <button class="version-toggle" onclick="toggleChangelog()">변경이력</button>
+  <button class="version-toggle" onclick="toggleMarkers()">변경 마커 ON/OFF</button>
+</div>
+
+<!-- ── 변경이력 패널 ── -->
+<div class="changelog-panel" id="changelogPanel">
+  <div class="changelog-inner">
+    <div class="changelog-title">변경이력</div>
+    <div class="change-legend">
+      <span><div class="dot add"></div> 추가</span>
+      <span><div class="dot chg"></div> 변경</span>
+      <span><div class="dot rem"></div> 삭제</span>
+    </div>
+
+    <div class="ver-block current">
+      <div class="ver-head">
+        <span class="ver-tag current">v3.0 (현재)</span>
+        <span class="ver-date">2026-03-24</span>
+      </div>
+      <div class="ver-summary">비밀번호 규칙 변경 (개인정보보호위원회 규정 적용)</div>
+      <ul class="ver-changes">
+        <li class="changed">비밀번호 규칙: 영문+숫자 8자 이상 → 영문+숫자+특수문자 8자 이상 (개인정보보호위원회 규정)</li>
+      </ul>
+    </div>
+
+    <div class="ver-block">
+      <div class="ver-head">
+        <span class="ver-tag past">v3.0</span>
+        <span class="ver-date">2026-03-20</span>
+      </div>
+      <div class="ver-summary">용어 수정 + 가독성 개선</div>
+      <ul class="ver-changes">
+        <li class="changed">기관담당자 → 기관관리자 (기존 용어로 복원)</li>
+        <li class="changed">마크노바 시스템 관리자: 공용계정 → 1인 1계정 (추가 필요 시 개발팀 DB 생성)</li>
+        <li class="changed">운영자 가입 시 문자인증 제거 (전화번호 입력은 유지, 차후 필요 시 추가)</li>
+        <li class="changed">응급콜센터 직원: 개인계정 + 이메일 링크 → 본인 비밀번호 설정 → 약관 동의 → 활성화</li>
+        <li class="changed">비밀번호 찾기: 담당자가 초기화 → 이메일 링크 재발송 → 본인 새 비밀번호 설정</li>
+        <li class="added">약관 동의: 이메일 링크로 가입하는 모든 역할에 추가 (CS 담당자 · 기관관리자 · 응급콜센터 직원 · 운영자)</li>
+        <li class="changed">기관관리자 생성 시 전화번호 입력 추가 (ID 찾기/비밀번호 초기화에 필요)</li>
+        <li class="changed">ID 찾기: 기관운영자만 → 시스템 관리자 제외 전 역할 공통으로 변경</li>
+        <li class="added">비밀번호 초기화 경로 정리: 역할별 상위 담당자 요청 경로 명시</li>
+        <li class="changed">"비밀번호 찾기" → "비밀번호 초기화" 용어 통일</li>
+        <li class="changed">CS 담당자/응급콜센터 직원 계정 생성 시 전화번호 입력 추가 (ID 찾기에 필요)</li>
+        <li class="removed">화면번호 매핑 섹션 제거 (프론트엔드 완성 후 새로 부여 예정)</li>
+        <li class="added">Mermaid 스타일 보완: 기관관리자 1차/2차 약관 동의(F_TERMS/M_TERMS) 노드 색상 지정</li>
+      </ul>
+    </div>
+
+    <div class="ver-block">
+      <div class="ver-head">
+        <span class="ver-tag past">v2.0</span>
+        <span class="ver-date">2026-03-19</span>
+      </div>
+      <div class="ver-summary">2026-03-18 회의 결과 반영 — 용어 정의 + 역할 변경 + 계정 정책 변경 + 초대 폐지</div>
+      <ul class="ver-changes">
+        <li class="added">용어 정의 섹션 신규 추가 (섹션 1)</li>
+        <li class="added">마크노바 시스템 관리자 역할 추가 — 마크노바 CS 담당자 계정 생성 담당</li>
+        <li class="added">운영자 가입 시 추가 정보 입력 — 전화번호(문자인증) / 부서(직접입력) / 역할 선택(운영담당자/사회복지사/생활지원사/응급관리요원/기타)</li>
+        <li class="added">통합 어드민 명시 — 모든 역할이 동일 주소로 접속, 역할별 메뉴 구성</li>
+        <li class="changed">문서 타이틀: MARKNOVA → B2G</li>
+        <li class="changed">슈퍼어드민 → 마크노바 CS 담당자</li>
+        <li class="changed">기관관리자 → 기관관리자 (1차/2차)</li>
+        <li class="changed">응급콜센터 → 응급콜센터 직원 (외주: 샘물정보통신)</li>
+        <li class="changed">슈퍼어드민 공유 계정 → 마크노바 시스템 관리자가 개별 발급</li>
+        <li class="changed">응급콜센터 계정 생성 주체: 개발팀 → 마크노바 CS 담당자</li>
+        <li class="changed">계정 생성 시 임시 비밀번호 폐지 — 이름/이메일/전화번호 입력, 이메일 링크가 인증 역할 대체</li>
+        <li class="changed">운영자 가입 방식: 비활성 계정 생성 → 이메일 링크(5일) → 인사 화면 → 비밀번호 설정 → 추가 정보 → 약관 동의</li>
+        <li class="changed">기관관리자 가입도 동일: 이메일 링크 → 비밀번호 설정 → 활성화</li>
+        <li class="changed">운영자/현장직 역할 통합 — 현장직 역할 삭제, 운영자가 현장직 업무 수행</li>
+        <li class="changed">비밀번호 찾기: 임시 비밀번호 발급 → 비밀번호 재설정 이메일 발송</li>
+        <li class="removed">초대코드 / 초대 발송 / 초대 현황 / SMS — 초대 개념 전체 삭제</li>
+        <li class="removed">로그인 실패 횟수 제한 — 제외 결정</li>
+        <li class="removed">엑셀/CSV 일괄 계정 생성 — 제외 결정</li>
+        <li class="removed">임시 비밀번호 개념 — 이메일 링크 방식으로 대체</li>
+        <li class="removed">"자동 처리" 표현 삭제 (애매한 표현)</li>
+      </ul>
+    </div>
+
+    <div class="ver-block">
+      <div class="ver-head">
+        <span class="ver-tag past">v1.0</span>
+        <span class="ver-date">2026-03-17</span>
+      </div>
+      <div class="ver-summary">최초 작성 — 기능정의서 v2 기반</div>
+      <ul class="ver-changes">
+        <li class="added">권한 계층 요약 (5개 역할)</li>
+        <li class="added">계정 생성 + 기관 생성 플로우 (6단계)</li>
+        <li class="added">운영자 초대 + 가입 플로우 (5단계)</li>
+        <li class="added">응급콜센터 계정 플로우</li>
+        <li class="added">전체 계정 라이프사이클 플로우차트 (Mermaid)</li>
+        <li class="added">공통 보안 정책</li>
+        <li class="added">화면번호 매핑</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 헤더 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="header">
+  <h1>B2G 계정 생성 / 기관 생성 / 가입 플로우</h1>
+  <div class="sub">
+    <span>B2G (정부/공공기관 대상)</span> 통합 어드민 — 모든 역할이 동일한 어드민 주소로 접속, 로그인 후 역할에 따라 메뉴 구성이 달라짐
+  </div>
+  <div style="margin-top: 14px;" class="v-changed">
+    <span class="badge badge-sys">마크노바 시스템 관리자</span>
+    <span class="badge badge-sa">마크노바 CS 담당자</span>
+    <span class="badge badge-mgr">1차 기관관리자</span>
+    <span class="badge badge-mgr">2차 기관관리자</span>
+    <span class="badge badge-opr">기관운영자</span>
+    <span class="badge badge-ec">응급콜센터 직원</span>
+  </div>
+  <div class="update-info">v3.0 | 2026-03-20 | 용어 수정 + 가독성 개선</div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 1. 용어 정의 (NEW) -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section v-new">
+  <div class="section-title"><div class="num">1</div> 용어 정의</div>
+  <div class="section-desc">2026-03-18 회의에서 확정된 역할 명칭입니다. 이후 모든 문서에서 이 명칭을 사용합니다.</div>
+
+  <table class="term-table">
+    <thead>
+      <tr>
+        <th style="width:180px">v1.0 명칭</th>
+        <th style="width:30px"></th>
+        <th style="width:200px">v2.0 명칭 (확정)</th>
+        <th>설명</th>
+        <th style="width:160px">계정 생성 방식</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="v-new">
+        <td><span style="color:#64748b; font-size:12px;">v1.0에 없음</span></td>
+        <td><span class="term-arrow">+</span></td>
+        <td><span class="term-new"><span class="badge badge-sys">마크노바 시스템 관리자</span></span></td>
+        <td>마크노바 내부 최상위 관리자. 마크노바 CS 담당자 계정을 생성·관리하는 역할. 시스템 관리 전용</td>
+        <td><strong>시스템 구축 시 최초 1명 생성 (1인 1계정, 추가 필요 시 개발팀 DB 생성)</strong></td>
+      </tr>
+      <tr>
+        <td><span class="term-old">슈퍼어드민</span></td>
+        <td><span class="term-arrow">→</span></td>
+        <td><span class="term-new"><span class="badge badge-sa">마크노바 CS 담당자</span></span></td>
+        <td>마크노바 내부 직원. 기관 등록, 기관관리자 계정 생성, 각 기관 CS 처리를 담당</td>
+        <td><strong>마크노바 시스템 관리자가 생성</strong><br><span style="font-size:11px; color:#64748b;">이메일 링크 → 비밀번호 설정 → 계정 활성화</span></td>
+      </tr>
+      <tr>
+        <td><span class="term-old">기관관리자 (1차/2차)</span></td>
+        <td><span class="term-arrow">→</span></td>
+        <td><span class="term-new"><span class="badge badge-mgr">기관관리자 (1차/2차)</span></span></td>
+        <td>B2G 고객사(기관) 소속. 기관운영자를 관리하는 담당자. 하위기관 생성 및 운영자 계정 생성 권한</td>
+        <td>마크노바 CS 담당자가 기관 생성 시 함께 생성</td>
+      </tr>
+      <tr>
+        <td><span class="term-old">기관운영자</span></td>
+        <td><span class="term-arrow">→</span></td>
+        <td><span class="term-new"><span class="badge badge-opr">기관운영자</span></span></td>
+        <td>실무 담당자. 대상자(이용자)를 직접적으로 관리하는 사람. 기존 현장직 역할이 운영자로 통합됨 (운영자 = 현장직)</td>
+        <td>기관관리자가 계정 생성 후 이메일 링크 발송</td>
+      </tr>
+      <tr>
+        <td><span class="term-old">응급콜센터</span></td>
+        <td><span class="term-arrow">→</span></td>
+        <td><span class="term-new"><span class="badge badge-ec">응급콜센터 직원</span></span></td>
+        <td>외주 인력 (샘물정보통신 담당자). 응급콜센터 메뉴만 접근 가능</td>
+        <td>마크노바 CS 담당자가 생성</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="notes-box" style="margin-top:16px;">
+    <h3>역할 계층 구조</h3>
+    <ul>
+      <li><span class="label">마크노바 시스템 관리자</span> (시스템 구축 시 최초 1명 생성, 1인 1계정) → 마크노바 CS 담당자 계정 생성</li>
+      <li><span class="label">마크노바 CS 담당자</span> (마크노바 시스템 관리자 생성) → 기관 생성 + 기관관리자 계정 생성 + 운영자 계정 생성 + 응급콜센터 직원 생성</li>
+      <li><span class="label">기관관리자</span> (마크노바 CS 담당자 생성) → 하위기관 생성 + 운영자 계정 생성</li>
+      <li><span class="label">기관운영자</span> (담당자/CS 생성) → 소속 기관 운영 (현장직 역할 통합)</li>
+      <li><span class="label">응급콜센터 직원</span> (마크노바 CS 담당자 생성) → 응급콜센터 메뉴만 (외주)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 2. 권한 계층 요약 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><div class="num">2</div> 권한 계층 요약</div>
+  <div class="section-desc">상위 역할은 하위 역할의 모든 기능을 포함합니다. 하위 역할은 본인 소속 범위만 접근 가능합니다.</div>
+
+  <table class="hierarchy-table">
+    <thead>
+      <tr>
+        <th style="width:180px">역할</th>
+        <th style="width:160px">계정 생성 방식</th>
+        <th>조회 가능 범위</th>
+        <th>기관 생성</th>
+        <th>운영자 관리</th>
+        <th>하위기관 관리</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="v-new">
+        <td class="role-cell"><span class="badge badge-sys">마크노바 시스템 관리자</span><br><span class="scope-cell">마크노바 최상위 관리자</span></td>
+        <td><span class="action-tag tag-create">시스템 구축 시 최초 1명 생성 (1인 1계정, 추가 필요 시 개발팀 DB 생성)</span></td>
+        <td>시스템 관리 영역만</td>
+        <td class="cross">-</td>
+        <td class="check">마크노바 CS 담당자 계정 생성</td>
+        <td class="cross">-</td>
+      </tr>
+      <tr class="v-changed">
+        <td class="role-cell"><span class="badge badge-sa">마크노바 CS 담당자</span><br><span class="scope-cell">마크노바 내부 직원</span></td>
+        <td><span class="action-tag tag-create">마크노바 시스템 관리자가 생성</span></td>
+        <td><strong>전체</strong> — 모든 기관 (1/2/3차)</td>
+        <td class="check">1차, 2차, 3차 모두</td>
+        <td class="check">전 기관 계정 생성 가능</td>
+        <td class="check">전체</td>
+      </tr>
+      <tr class="v-changed">
+        <td class="role-cell"><span class="badge badge-mgr">1차 기관관리자</span><br><span class="scope-cell">B2G 고객사 담당자</span></td>
+        <td><span class="action-tag tag-auto">마크노바 CS 담당자가 기관 생성 시</span></td>
+        <td>본인 1차 + 하위 2차/3차</td>
+        <td class="check">2차 기관 생성</td>
+        <td class="check">2차/3차 운영자 계정 생성</td>
+        <td class="check">하위기관</td>
+      </tr>
+      <tr class="v-changed">
+        <td class="role-cell"><span class="badge badge-mgr">2차 기관관리자</span><br><span class="scope-cell">하위기관 담당자</span></td>
+        <td><span class="action-tag tag-auto">1차 담당자가 기관 생성 시</span></td>
+        <td>본인 2차 + 하위 3차</td>
+        <td class="check">3차 기관 생성</td>
+        <td class="check">3차 운영자 계정 생성</td>
+        <td class="check">하위기관</td>
+      </tr>
+      <tr class="v-changed">
+        <td class="role-cell"><span class="badge badge-opr">기관운영자</span><br><span class="scope-cell">실무 담당자 (현장직 역할 통합)</span></td>
+        <td><span class="action-tag tag-create">담당자가 계정 생성 → 이메일 링크</span></td>
+        <td>소속 기관만</td>
+        <td class="cross">-</td>
+        <td class="cross">-</td>
+        <td class="cross">-</td>
+      </tr>
+      <tr class="v-changed">
+        <td class="role-cell"><span class="badge badge-ec">응급콜센터 직원</span><br><span class="scope-cell">외주 (샘물정보통신)</span></td>
+        <td><span class="action-tag tag-create">마크노바 CS 담당자가 생성</span></td>
+        <td>응급콜센터 메뉴만</td>
+        <td class="cross">-</td>
+        <td class="cross">-</td>
+        <td class="cross">-</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#880e4f"></div> 마크노바 시스템 관리자 — 마크노바 CS 담당자 계정 생성</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div> 마크노바 CS 담당자 — 전체 시스템 관리 + CS</div>
+    <div class="legend-item"><div class="legend-color" style="background:#2563eb"></div> 기관관리자 — 기관 생성 + 운영자 관리</div>
+    <div class="legend-item"><div class="legend-color" style="background:#059669"></div> 기관운영자 — 소속 기관 운영 (현장직 역할 통합)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#db2777"></div> 응급콜센터 직원 — 콜센터 전용 (외주)</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 3. 계정 생성 + 기관 생성 플로우 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><div class="num">3</div> 계정 생성 + 기관 생성 플로우</div>
+  <div class="section-desc">기관 생성 시 기관관리자 계정이 함께 생성됩니다. 상위 → 하위 순으로 진행됩니다.</div>
+
+  <table class="flow-table">
+    <thead>
+      <tr>
+        <th style="width:50px">단계</th>
+        <th style="width:140px">액션</th>
+        <th><span class="badge badge-sa">마크노바 CS 담당자</span></th>
+        <th><span class="badge badge-mgr">1차 기관관리자</span></th>
+        <th><span class="badge badge-mgr">2차 기관관리자</span></th>
+        <th>시스템 처리</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- STEP 1 -->
+      <tr>
+        <td class="step-num">1</td>
+        <td class="step-name">마크노바 CS 담당자<br>계정 생성</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-create">마크노바 시스템 관리자가 생성</span><br>
+          마크노바 시스템 관리자가 마크노바 CS 담당자 계정을 개별 발급
+          <div class="note note-blue">마크노바 시스템 관리자 계정은 시스템 구축 시 최초 1명 생성 (1인 1계정)</div>
+        </td>
+        <td class="inactive">-</td>
+        <td class="inactive">-</td>
+        <td class="active">
+          계정 생성 + 이메일 링크 발송
+        </td>
+      </tr>
+      <!-- STEP 2 -->
+      <tr>
+        <td class="step-num">2</td>
+        <td class="step-name">1차 기관<br>신규 생성</td>
+        <td class="active">
+          <span class="action-tag tag-create">기관 생성</span><br>
+          어드민 > 기관관리 > 신규 생성<br>
+          <strong>입력:</strong> 기관명, 담당자 이름, 이메일, 전화번호
+          <div class="note note-blue">기관 생성 = 1차 기관관리자 계정 함께 생성</div>
+        </td>
+        <td class="inactive">아직 계정 없음</td>
+        <td class="inactive">-</td>
+        <td class="active v-changed">
+          1차 기관 생성<br>
+          기관관리자 계정 생성 (비활성)<br>
+          계정정보 이메일 링크 발송
+        </td>
+      </tr>
+      <!-- STEP 3 -->
+      <tr>
+        <td class="step-num">3</td>
+        <td class="step-name">1차 담당자<br>최초 로그인</td>
+        <td class="inactive">-</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-login">이메일 링크 클릭</span><br>
+          이메일로 받은 링크 클릭 → 비밀번호 설정 화면 → 약관 동의
+          <div class="note note-red">비밀번호 설정 필수 — 영문+숫자+특수문자 8자 이상<br>설정 전까지 로그인 불가</div>
+        </td>
+        <td class="inactive">-</td>
+        <td class="active">
+          링크 유효 여부 확인<br>
+          비밀번호 설정 화면 표시<br>
+          약관 동의 → 대시보드
+        </td>
+      </tr>
+      <!-- STEP 4 -->
+      <tr>
+        <td class="step-num">4</td>
+        <td class="step-name">2차 기관<br>신규 생성</td>
+        <td class="active" style="color:#64748b; font-size:12px;">
+          마크노바 CS 담당자도 직접 생성 가능
+        </td>
+        <td class="active">
+          <span class="action-tag tag-create">기관 생성</span><br>
+          어드민 > 기관관리 > 하위기관 생성<br>
+          <strong>입력:</strong> 기관명, 담당자 이름, 이메일, 전화번호
+          <div class="note note-blue">계층 자동 계산 — 1차 기관의 하위로 배치</div>
+        </td>
+        <td class="inactive">아직 계정 없음</td>
+        <td class="active v-changed">
+          2차 기관 생성 (상위기관 연결)<br>
+          기관관리자 계정 생성 (비활성)<br>
+          계정정보 이메일 링크 발송
+        </td>
+      </tr>
+      <!-- STEP 5 -->
+      <tr>
+        <td class="step-num">5</td>
+        <td class="step-name">2차 담당자<br>최초 로그인</td>
+        <td class="inactive">-</td>
+        <td class="inactive">-</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-login">이메일 링크 클릭</span><br>
+          이메일로 받은 링크 클릭 → 비밀번호 설정 화면 → 약관 동의
+          <div class="note note-red">비밀번호 설정 필수 — 영문+숫자+특수문자 8자 이상</div>
+        </td>
+        <td class="active">
+          링크 유효 여부 확인<br>
+          비밀번호 설정 화면 표시<br>
+          약관 동의 → 대시보드
+        </td>
+      </tr>
+      <!-- STEP 6 -->
+      <tr>
+        <td class="step-num">6</td>
+        <td class="step-name">3차 기관<br>신규 생성</td>
+        <td class="active" style="color:#64748b; font-size:12px;">
+          마크노바 CS 담당자도 직접 생성 가능
+        </td>
+        <td class="active" style="color:#64748b; font-size:12px;">
+          1차 담당자도 직접 생성 가능
+        </td>
+        <td class="active">
+          <span class="action-tag tag-create">기관 생성</span><br>
+          어드민 > 기관관리 > 하위기관 생성<br>
+          <div class="note note-blue">3차까지 — 더 이상 하위 생성 불가</div>
+        </td>
+        <td class="active">
+          3차 기관 생성<br>
+          (담당자 계정은 상위에서 관리)
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 4. 운영자 계정 생성 + 가입 플로우 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section v-changed">
+  <div class="section-title"><div class="num">4</div> 운영자 계정 생성 + 가입 플로우</div>
+  <div class="section-desc">기관관리자(또는 마크노바 CS 담당자)가 운영자 계정을 직접 생성합니다. 운영자는 별도 회원가입 없이, 이메일 링크 클릭 → 인사 화면 → 비밀번호 설정 → 추가 정보 → 약관 동의 순서로 가입이 완료됩니다.</div>
+
+  <table class="flow-table">
+    <thead>
+      <tr>
+        <th style="width:50px">단계</th>
+        <th style="width:140px">액션</th>
+        <th><span class="badge badge-sa">마크노바 CS 담당자</span> / <span class="badge badge-mgr">기관관리자</span></th>
+        <th><span class="badge badge-opr">기관운영자 (가입 전)</span></th>
+        <th>시스템 처리</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="step-num">1</td>
+        <td class="step-name">운영자 계정<br>생성</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-create">계정 생성</span> 이름, ID(이메일), 전화번호 입력 → 계정 직접 생성<br>
+          <div class="note note-purple">마크노바 CS 담당자: 전 기관 운영자 계정 생성 가능<br>1차 담당자: 2차/3차 기관 운영자 계정 생성<br>2차 담당자: 3차 기관 운영자 계정 생성</div>
+        </td>
+        <td class="inactive">아직 계정 없음</td>
+        <td class="active v-changed">
+          비활성 계정 생성 (비밀번호 설정 전까지 로그인 불가)<br>
+          입력한 ID(이메일)로 계정 생성 이메일 링크 발송
+          <div class="note note-yellow">링크 유효기간: 발송일로부터 5일<br>5일 내 재접속 가능, 만료 시 새 링크 재전송 필요</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td class="step-name">계정 현황<br>관리</td>
+        <td class="active">
+          계정 현황 조회<br>
+          <strong>상태:</strong> 비활성(비밀번호 미설정) / 활성(비밀번호 설정완료) / 링크만료<br>
+          링크만료 시 새 링크 재발송
+        </td>
+        <td class="inactive">이메일 수신 대기</td>
+        <td class="active v-changed">
+          계정 상태 갱신<br>
+          발송일로부터 5일 경과 → 링크 만료 처리
+        </td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td class="step-name">링크 클릭<br>비밀번호 설정</td>
+        <td class="inactive">-</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-login">이메일 링크 클릭</span><br>
+          링크 클릭 → "ㅇㅇㅇ님 안녕하세요" 인사 화면<br>
+          [다음] 버튼 → 비밀번호 설정 화면
+          <div class="note note-red">비밀번호 설정 필수 — 영문+숫자+특수문자 8자 이상<br>만료된 링크(발송일로부터 5일 초과) → 오류 안내 (담당자에게 재발송 요청)</div>
+        </td>
+        <td class="active">
+          링크 유효 여부 확인 (발송일로부터 5일)<br>
+          인사 화면 → 비밀번호 설정 화면 표시
+        </td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td class="step-name">추가 정보<br>입력</td>
+        <td class="inactive">-</td>
+        <td class="active v-new">
+          <span class="action-tag tag-create">추가 정보 입력</span><br>
+          <strong>전화번호</strong> — 입력 (문자인증 없음, 차후 필요 시 추가)<br>
+          <strong>부서</strong> — 직접 입력 (텍스트)<br>
+          <strong>역할 선택</strong> — 운영담당자 / 사회복지사 / 생활지원사 / 응급관리요원 / 기타
+          <div class="note note-blue">운영자·현장직 역할 통합에 따라 주요 역할을 선택지로 축소 정리</div>
+        </td>
+        <td class="active">
+          전화번호/부서/역할 저장
+        </td>
+      </tr>
+      <tr>
+        <td class="step-num">5</td>
+        <td class="step-name">이용약관<br>동의</td>
+        <td class="inactive">-</td>
+        <td class="active">
+          서비스 이용약관 동의<br>
+          개인정보 처리방침 동의<br>
+          <span style="font-size:11px; color:#94a3b8;">(필수 항목 전체 동의 후 다음)</span>
+        </td>
+        <td class="inactive">-</td>
+      </tr>
+      <tr>
+        <td class="step-num">6</td>
+        <td class="step-name">가입 완료<br>로그인</td>
+        <td class="inactive">-</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-login">가입 완료</span><br>
+          비밀번호 설정 + 추가 정보 + 약관 동의 완료 → 계정 활성화 → 로그인 가능
+          <div class="note note-green">비밀번호 설정 완료 시점에 비활성 → 활성계정으로 전환<br>별도 승인 절차 없음</div>
+        </td>
+        <td class="active">
+          전체 입력값 확인<br>
+          비활성 → 활성계정 전환<br>
+          로그인 가능
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 5. 응급콜센터 직원 계정 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section v-changed">
+  <div class="section-title"><div class="num">5</div> 응급콜센터 직원 계정</div>
+  <div class="section-desc">응급콜센터는 외주 인력(샘물정보통신)이 담당하며, 마크노바 CS 담당자가 계정을 생성합니다.</div>
+
+  <table class="flow-table">
+    <thead>
+      <tr>
+        <th style="width:50px">단계</th>
+        <th style="width:140px">액션</th>
+        <th><span class="badge badge-sa">마크노바 CS 담당자</span></th>
+        <th><span class="badge badge-ec">응급콜센터 직원</span></th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="step-num">1</td>
+        <td class="step-name">계정 생성</td>
+        <td class="active v-changed">
+          <span class="action-tag tag-create">계정 생성</span><br>
+          마크노바 CS 담당자가 응급콜센터 직원 계정 생성 (이름, 이메일, 전화번호 입력)<br>
+          응급콜센터 메뉴 권한만 부여 (개인계정)
+        </td>
+        <td class="inactive">-</td>
+        <td class="active">
+          비활성 계정 생성<br>
+          이메일 링크 발송 (발송일로부터 5일 유효)<br>
+          기관관리/대상자관리 등 다른 메뉴 접근 불가
+        </td>
+      </tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td class="step-name">비밀번호 설정</td>
+        <td class="inactive">-</td>
+        <td class="active">
+          <span class="action-tag tag-login">이메일 링크 클릭</span><br>
+          이메일로 받은 링크 클릭 → 비밀번호 설정 화면
+          <div class="note note-red">비밀번호 설정 필수 — 영문+숫자+특수문자 8자 이상</div>
+        </td>
+        <td class="active">
+          링크 유효 여부 확인<br>
+          비밀번호 설정 화면 표시
+        </td>
+      </tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td class="step-name">약관 동의</td>
+        <td class="inactive">-</td>
+        <td class="active">
+          서비스 이용약관 동의<br>
+          개인정보 처리방침 동의
+        </td>
+        <td class="inactive">-</td>
+      </tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td class="step-name">로그인</td>
+        <td class="inactive">-</td>
+        <td class="active">
+          <span class="action-tag tag-login">가입 완료 → 로그인</span><br>
+          비밀번호 설정 + 약관 동의 완료 → 계정 활성화<br>
+          응급콜센터 대시보드 진입
+        </td>
+        <td class="active">
+          비활성 → 활성계정 전환<br>
+          응급 요청/처리 현황 모니터링<br>
+          처리 결과 기록 (통화유무, 처리결과)
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 6. 전체 플로우차트 (Mermaid) -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><div class="num">6</div> 전체 계정 라이프사이클 플로우차트</div>
+  <div class="section-desc">계정 생성부터 로그인, 기관 생성, 운영자 가입까지 전체 흐름을 한눈에 보여줍니다.</div>
+
+  <div class="mermaid-wrap">
+    <div class="mermaid">
+flowchart TD
+    subgraph DEV["시스템 구축"]
+        A0["마크노바 시스템 관리자 계정\n(시스템 구축 시 최초 1명 생성, 1인 1계정)"]
+    end
+
+    A0 --> SYS["마크노바 시스템 관리자 로그인"]
+
+    subgraph SYSADMIN["마크노바 시스템 관리자 영역"]
+        SYS --> SYSMENU["대시보드"]
+        subgraph SYSMENU_SUB["메뉴"]
+            A1["마크노바 CS 담당자 계정 생성\n(이름/이메일/전화번호 입력)"]
+            SYSPW["본인 비밀번호 변경"]
+        end
+    end
+
+    style SYSMENU_SUB fill:#fce4ec,stroke:#f48fb1
+
+    A1 --> A1_DONE["비활성 계정 생성\n+ 이메일 링크 발송(5일)"]
+    A1_DONE --> A1_URL["마크노바 CS 담당자:\n링크 클릭 → 비밀번호 설정\n→ 약관 동의"]
+    A1_URL --> B["마크노바 CS 담당자 로그인\n(계정 활성화)"]
+
+    subgraph SA["마크노바 CS 담당자 영역"]
+        B --> C["기관관리 > 1차 기관 생성\n(기관명, 담당자정보 입력)"]
+        C --> D["1차 기관관리자 계정 생성\n+ 이메일 링크 발송"]
+        B --> A2["응급콜센터 직원 계정 생성\n(이름/이메일/전화번호 입력)"]
+    end
+
+    A2 --> A2_DONE["비활성 계정 생성\n+ 이메일 링크 발송(5일)"]
+    A2_DONE --> A2_URL["응급콜센터 직원:\n링크 클릭 → 비밀번호 설정\n→ 약관 동의"]
+    A2_URL --> EC["응급콜센터 직원 로그인\n(콜센터 메뉴만)"]
+
+    D --> E["1차 기관관리자\n이메일 링크 클릭"]
+    E --> F{"비밀번호 설정 완료?"}
+    F -->|"아니오"| G["비밀번호 설정\n(영문+숫자+특수문자 8자 이상)"]
+    G --> F
+    F -->|"예"| F_TERMS["약관 동의"]
+    F_TERMS --> H["1차 담당자 대시보드"]
+
+    subgraph MGR1["1차 기관관리자 영역"]
+        H --> I["2차 기관 생성\n(계층 자동 계산)"]
+        H --> J["운영자 계정 생성\n+ 이메일 링크 발송"]
+        I --> K["2차 기관관리자 계정 생성\n+ 이메일 링크 발송"]
+    end
+
+    K --> L["2차 기관관리자\n이메일 링크 클릭"]
+    L --> M{"비밀번호 설정 완료?"}
+    M -->|"아니오"| N["비밀번호 설정"]
+    N --> M
+    M -->|"예"| M_TERMS["약관 동의"]
+    M_TERMS --> O["2차 담당자 대시보드"]
+
+    subgraph MGR2["2차 기관관리자 영역"]
+        O --> P["3차 기관 생성"]
+        O --> Q["운영자 계정 생성\n+ 이메일 링크 발송"]
+    end
+
+    J --> R["이메일 링크 발송\n(유효기간 5일)"]
+    Q --> R
+
+    R --> S["운영자: 이메일 링크 클릭"]
+    S --> T{"링크 유효?\n(발송일로부터 5일 이내)"}
+    T -->|"만료/오류"| U["오류 안내\n(담당자에게 재발송 요청)"]
+    T -->|"유효"| GREET["ㅇㅇㅇ님 안녕하세요\n(인사 화면)"]
+    GREET --> V["다음 → 비밀번호 설정"]
+    V --> EXTRA["추가 정보 입력\n전화번호 / 부서 / 역할"]
+    EXTRA --> W["이용약관 동의"]
+    W --> X["가입 완료"]
+    X --> Z["기관운영자 로그인"]
+
+    style DEV fill:#f3e5f5,stroke:#ce93d8
+    style SYSADMIN fill:#fce4ec,stroke:#f06292
+    style SYS fill:#f48fb1,color:#fff
+    style A0 fill:#ce93d8,color:#fff
+    style SYSPW fill:#f8bbd0,color:#880e4f
+    style SA fill:#fef3c7,stroke:#f59e0b
+    style MGR1 fill:#dbeafe,stroke:#3b82f6
+    style MGR2 fill:#e0e7ff,stroke:#6366f1
+    style EC fill:#fce7f3,stroke:#ec4899
+    style A1_DONE fill:#dcfce7,color:#166534
+    style A1_URL fill:#dbeafe,color:#1e40af
+    style A1 fill:#fbbf24,color:#000
+    style A2 fill:#f472b6,color:#fff
+    style A2_DONE fill:#dcfce7,color:#166534
+    style A2_URL fill:#fce7f3,color:#9d174d
+    style B fill:#fbbf24,color:#000
+    style F fill:#fef3c7,color:#92400e
+    style F_TERMS fill:#e0e7ff,color:#3730a3
+    style M fill:#fef3c7,color:#92400e
+    style M_TERMS fill:#e0e7ff,color:#3730a3
+    style G fill:#fee2e2,color:#991b1b
+    style N fill:#fee2e2,color:#991b1b
+    style T fill:#fef3c7,color:#92400e
+    style U fill:#fee2e2,color:#991b1b
+    style GREET fill:#e0e7ff,color:#3730a3
+    style EXTRA fill:#dbeafe,color:#1e40af
+    style X fill:#dcfce7,color:#166534
+    style Z fill:#d1fae5,color:#065f46
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- 7. 공통 보안 정책 -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><div class="num">7</div> 공통 보안 정책 (전 역할 적용)</div>
+
+  <div class="notes-box">
+    <h3>로그인 보안</h3>
+    <ul>
+      <li><span class="label">세션 타임아웃</span> 30분 비활동 시 자동 로그아웃, 만료 5분 전 연장 모달</li>
+      <li><span class="label">비밀번호 규칙</span> 영문 + 숫자 + 특수문자 조합 8자 이상 필수 (개인정보보호위원회 규정)</li>
+      <li><span class="label">최초 가입</span> 이메일 링크 클릭 → 비밀번호 설정 완료 전까지 로그인 불가 (이메일 링크가 임시 비밀번호 역할을 대체)</li>
+      <li class="v-removed"><span class="label">로그인 실패 제한</span> 제외 결정 (2026-03-18 회의)</li>
+    </ul>
+  </div>
+
+  <div class="notes-box" style="margin-top: 16px;">
+    <h3>계정 관리 기능</h3>
+    <ul>
+      <li><span class="label">개인정보 수정</span> 이름, 전화번호, 부서 변경 (이메일/역할은 변경 불가)</li>
+      <li><span class="label">비밀번호 변경</span> 현재 비밀번호 확인 후 새 비밀번호 설정</li>
+      <li><span class="label">ID 찾기</span> 이름 + 전화번호 입력 → 이메일(ID) 마스킹 표시 (로그인 화면, 시스템 관리자 제외 전 역할 공통)</li>
+      <li><span class="label">비밀번호 초기화</span> 상위 담당자에게 요청 → 비밀번호 초기화 → 이메일 링크 재발송 → 본인이 새 비밀번호 설정</li>
+      <li class="v-new"><span class="label">비밀번호 초기화 경로</span>
+        <br>· 시스템 관리자 → 개발팀 DB 직접 초기화
+        <br>· 마크노바 CS 담당자 → 시스템 관리자에게 요청
+        <br>· 기관관리자 → 마크노바 CS 담당자에게 요청
+        <br>· 운영자 → 기관관리자에게 요청
+        <br>· 응급콜센터 직원 → 마크노바 CS 담당자에게 요청
+      </li>
+      <li class="v-new"><span class="label">마크노바 시스템 관리자</span> 본인 비밀번호 변경 가능 (1인 1계정, 최초 로그인 시 강제 변경 아님)</li>
+    </ul>
+  </div>
+
+  <div class="notes-box" style="margin-top: 16px;" class="v-changed">
+    <h3>계정 생성 / 이메일 링크</h3>
+    <ul>
+      <li class="v-changed"><span class="label">계정 생성 정책</span> 모든 역할 공통 — 생성 직후 비활성 상태 (비밀번호 없음), 비밀번호 설정 완료 전까지 로그인 불가. 임시 비밀번호 없이 이메일 링크가 인증 역할을 대체</li>
+      <li class="v-changed"><span class="label">마크노바 CS 담당자</span> 마크노바 시스템 관리자가 이름/이메일/전화번호 입력 → 비활성 계정 생성 → 이메일 링크 발송 → 비밀번호 설정 → 약관 동의 → 활성화</li>
+      <li class="v-changed"><span class="label">기관관리자 계정</span> 기관 생성 시 담당자 비활성 계정 함께 생성 → 이메일 링크 자동 발송</li>
+      <li class="v-changed"><span class="label">운영자 계정 생성</span> 담당자가 이름/ID(이메일)/전화번호 입력 → 비활성 계정 생성 → 이메일 링크 자동 발송 (별도 회원가입 없음)</li>
+      <li><span class="label">링크 유효기간</span> 발송일로부터 5일 — 5일 내 재접속 가능, 만료 시 새 링크 재전송</li>
+      <li><span class="label">링크 클릭 후 (CS 담당자)</span> 비밀번호 설정 → 약관 동의 → 계정 활성화</li>
+      <li><span class="label">링크 클릭 후 (기관관리자)</span> 비밀번호 설정 → 약관 동의 → 계정 활성화</li>
+      <li><span class="label">링크 클릭 후 (응급콜센터 직원)</span> 비밀번호 설정 → 약관 동의 → 계정 활성화</li>
+      <li><span class="label">링크 클릭 후 (운영자)</span> 인사 화면 → [다음] → 비밀번호 설정 → 추가 정보(전화번호/부서/역할) → 약관 동의 → 가입 완료</li>
+      <li><span class="label">계정 활성화</span> 비밀번호 설정 완료 시점에 비활성 → 활성계정 전환, 이후 로그인 가능</li>
+      <li class="v-removed"><span class="label">초대코드 / SMS</span> 초대 방식 전체 폐지 — 관리자가 계정을 직접 생성해줌</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 화면번호 매핑 섹션 — v3.0에서 제거 (프론트엔드 완성 후 새로 부여 예정) -->
+
+</div><!-- /page -->
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#93c5fd',
+      lineColor: '#64748b',
+      fontSize: '13px',
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      nodeSpacing: 30,
+      rankSpacing: 40,
+    }
+  });
+
+  function toggleChangelog() {
+    document.getElementById('changelogPanel').classList.toggle('open');
+  }
+
+  let markersVisible = true;
+  function toggleMarkers() {
+    markersVisible = !markersVisible;
+    document.querySelector('.page').classList.toggle('v-marker-hide', !markersVisible);
+  }
+</script>
+</body>
+</html>
